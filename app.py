@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 from sqlalchemy import inspect
 from datetime import datetime
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse, quote_plus
 
 # Declare app globally
 app = Flask(__name__)
@@ -25,19 +26,45 @@ login_manager.login_view = 'signin'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
 
+
+def build_database_uri():
+    """Build a SQLAlchemy-compatible PostgreSQL URL for local or hosted Postgres."""
+    raw_db_uri = os.getenv('DATABASE_URL') or os.getenv('SQLALCHEMY_DATABASE_URI')
+    if not raw_db_uri:
+        # Fallback for local PostgreSQL development.
+        pg_user = quote_plus(os.getenv('POSTGRES_USER', 'postgres'))
+        pg_password = quote_plus(os.getenv('POSTGRES_PASSWORD', 'postgres'))
+        pg_host = os.getenv('POSTGRES_HOST', 'localhost')
+        pg_port = os.getenv('POSTGRES_PORT', '5432')
+        pg_db = os.getenv('POSTGRES_DB', 'quizmaster')
+        raw_db_uri = f'postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}'
+
+    # Normalize legacy postgres:// URLs to SQLAlchemy-compatible form.
+    if raw_db_uri.startswith('postgres://'):
+        raw_db_uri = raw_db_uri.replace('postgres://', 'postgresql://', 1)
+
+    # Use psycopg driver for PostgreSQL URLs unless a driver is already specified.
+    if raw_db_uri.startswith('postgresql://') and '+' not in raw_db_uri.split('://', 1)[0]:
+        raw_db_uri = raw_db_uri.replace('postgresql://', 'postgresql+psycopg://', 1)
+
+    parsed = urlparse(raw_db_uri)
+    if parsed.scheme.startswith('postgresql'):
+        query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+        hostname = (parsed.hostname or '').lower()
+        is_local_host = hostname in {'localhost', '127.0.0.1'}
+        query_params.setdefault('sslmode', 'disable' if is_local_host else 'require')
+        raw_db_uri = urlunparse(parsed._replace(query=urlencode(query_params)))
+
+    return raw_db_uri
+
 def setup_app():
     # Load environment variables from .env file
     load_dotenv()
 
     # Set the configuration for SQLAlchemy and secret key from environment variables
-    db_uri = os.getenv('SQLALCHEMY_DATABASE_URI') or os.getenv('DATABASE_URL') or 'sqlite:///quizmaster.sqlite3'
-    # Normalize Postgres URI to use pg8000 (pure Python) to avoid binary driver issues
-    if db_uri.startswith('postgres://'):
-        db_uri = db_uri.replace('postgres://', 'postgresql+pg8000://', 1)
-    elif db_uri.startswith('postgresql://') and '+pg8000' not in db_uri:
-        db_uri = db_uri.replace('postgresql://', 'postgresql+pg8000://', 1)
+    db_uri = build_database_uri()
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri  # Prefer Render Postgres if provided
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_default_secret_key_change_this')  # Secret key from .env
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Disable modification tracking
     
