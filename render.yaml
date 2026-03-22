@@ -15,6 +15,10 @@ services:
     
     # Environment variables
     envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FLASK_SECRET_KEY
+        generateValue: true
       - key: FLASK_ENV
         value: production
       - key: FLASK_APP

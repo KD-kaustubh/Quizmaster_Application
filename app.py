@@ -120,8 +120,8 @@ def setup_app():
     # Direct access to other models
     app.app_context().push()
 
-    # Enable debug mode for development
-    app.debug = True
+    # Enable debug mode only for local development.
+    app.debug = flask_env == 'development' and os.getenv('FLASK_DEBUG', '0').lower() in {'1', 'true', 'yes'}
     print("Quiz Master app is started...")
 
 # Calling setup function
@@ -132,4 +132,4 @@ from backend.controllers import *
 
 if __name__ == '__main__':
     # Run the application
-    app.run(debug=True)
+    app.run(debug=app.debug)
