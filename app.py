@@ -57,6 +57,7 @@ def build_database_uri():
 
     return raw_db_uri
 
+
 def setup_app():
     # Load environment variables from .env file
     load_dotenv()
@@ -65,13 +66,21 @@ def setup_app():
     db_uri = build_database_uri()
 
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
-    app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_default_secret_key_change_this')  # Secret key from .env
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # Disable modification tracking
-    
+    app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'your_default_secret_key_change_this')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Connection pool settings for Neon PostgreSQL stability
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,   # Test connection before using it (fixes SSL drop)
+        'pool_recycle': 300,     # Recycle connections every 5 minutes
+        'pool_size': 5,          # Max 5 persistent connections
+        'max_overflow': 2,       # Allow 2 extra connections under load
+    }
+
     # Security configurations
     flask_env = os.getenv('FLASK_ENV', 'development').lower()
     app.config['SESSION_COOKIE_SECURE'] = flask_env == 'production'  # HTTPS only in production
-    app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
+    app.config['SESSION_COOKIE_HTTPONLY'] = True   # Prevent JavaScript access
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
     app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour session timeout
     app.config['WTF_CSRF_TIME_LIMIT'] = None  # No time limit on CSRF tokens
@@ -123,6 +132,7 @@ def setup_app():
     # Enable debug mode only for local development.
     app.debug = flask_env == 'development' and os.getenv('FLASK_DEBUG', '0').lower() in {'1', 'true', 'yes'}
     print("Quiz Master app is started...")
+
 
 # Calling setup function
 setup_app()
