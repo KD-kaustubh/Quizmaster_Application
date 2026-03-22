@@ -2,7 +2,7 @@
 
 A modern, secure, and feature-rich web-based quizzing platform built with Flask. Quiz Master enables educators to create and manage quizzes while allowing students to take assessments and track their performance.
 
-**Live Demo**: https://quizmaster-1y50.onrender.com
+**Live Demo**: https://quizmaster-application.onrender.com
 
 ##  Features
 
