@@ -121,18 +121,6 @@ def setup_app():
             db.session.commit()
             print("Seeded default admin and student users.")
 
-        # Optional full demo seed for hosted environments like Render.
-        auto_seed = os.getenv('AUTO_SEED_DEMO_DATA', 'false').lower() in {'1', 'true', 'yes'}
-        if auto_seed:
-            try:
-                from seed_demo_data import seed_demo_data
-
-                seed_demo_data()
-                print("Auto demo data seeding completed.")
-            except Exception as exc:
-                db.session.rollback()
-                print(f"Auto demo data seeding skipped due to error: {exc}")
-
     # User loader for Flask-Login
     @login_manager.user_loader
     def load_user(user_id):
